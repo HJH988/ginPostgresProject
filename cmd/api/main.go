@@ -1,13 +1,21 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	var router 
+	var router *gin.Engine = gin.Default()
+	router.SetTrustedProxies(nil)
+	router.GET("/", func(c *gin.Context) {
+		// map[string]interface{}
+		// map[string]any{}
+		c.JSON(200, gin.H{
+			"message": "Todo API is Running!",
+			"status":  "success",
+		})
+	})
 
-	gin.Default()
+	router.Run(":3000")
+
 }
