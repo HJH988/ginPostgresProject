@@ -11,7 +11,7 @@ func main() {
 		// map[string]interface{}
 		// map[string]any{}
 		c.JSON(200, gin.H{
-			"message": "Todo API is Running!",
+			"message": "Todo API is Running well!",
 			"status":  "success",
 		})
 	})
