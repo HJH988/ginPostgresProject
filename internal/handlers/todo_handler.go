@@ -16,8 +16,8 @@ type CreateTodoInput struct {
 }
 
 type UpdateTodoInput struct {
-	Title     string `json:"title"`
-	Completed *bool  `json:"completed"`
+	Title     *string `json:"title"`
+	Completed *bool   `json:"completed"`
 }
 
 func CreateTodoHandler(pool *pgxpool.Pool) gin.HandlerFunc {
@@ -87,6 +87,7 @@ func UpdateTodoHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid todo ID"})
+			return
 		}
 
 		var input UpdateTodoInput
@@ -96,17 +97,12 @@ func UpdateTodoHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 			return
 		}
 
-		if input.Title == "" && input.Completed == nil {
+		if input.Title == nil && input.Completed == nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "At least one field (title or completed) must be provided for update"})
 			return
 		}
 
-		var completed bool
-		if input.Completed != nil {
-			completed = *input.Completed
-		}
-
-		todo, err := repository.UpdateToDo(pool, id, input.Title, completed)
+		existing, err := repository.GetToDoByID(pool, id)
 
 		if err != nil {
 			if err == pgx.ErrNoRows {
@@ -118,6 +114,51 @@ func UpdateTodoHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 			return
 		}
 
+		title := existing.Title
+		if input.Title != nil {
+			title = *input.Title
+		}
+
+		completed := existing.Completed
+
+		if input.Completed != nil {
+			completed = *input.Completed
+		}
+
+		todo, err := repository.UpdateToDo(pool, id, title, completed)
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
 		c.JSON(http.StatusOK, todo)
+	}
+}
+
+func DeleteTodoHandler(pool *pgxpool.Pool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		idStr := c.Param("id")
+
+		id, err := strconv.Atoi(idStr)
+
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid todo ID"})
+			return
+		}
+
+		err = repository.DeleteToDo(pool, id)
+
+		if err != nil {
+			if err.Error() == "Todo with id "+idStr+" not found" {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Todo not found"})
+				return
+			}
+
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "Todo deleted successfully"})
 	}
 }
