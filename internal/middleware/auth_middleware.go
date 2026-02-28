@@ -3,6 +3,7 @@ package middleware
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 	"todo_api/internal/config"
@@ -48,12 +49,23 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 			return
 		}
 
-		userID, ok := claims["user_id"].(string)
-
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+		// accept several possible types for user_id (string, number, etc.)
+		var userID string
+		rawUserID, hasUserID := claims["user_id"]
+		if !hasUserID {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims: user_id missing"})
 			c.Abort()
 			return
+		}
+		switch v := rawUserID.(type) {
+		case string:
+			userID = v
+		case float64:
+			userID = strconv.FormatInt(int64(v), 10)
+		case int64:
+			userID = strconv.FormatInt(v, 10)
+		default:
+			userID = fmt.Sprintf("%v", v)
 		}
 
 		if exp, ok := claims["exp"].(float64); ok {
@@ -65,7 +77,7 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 				return
 			}
 		}
-		c.Set("userID", userID)
+		c.Set(ContextUserIDKey, userID)
 		c.Next()
 	}
 }

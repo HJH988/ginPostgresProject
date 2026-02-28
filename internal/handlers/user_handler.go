@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 	"todo_api/internal/config"
+	"todo_api/internal/middleware"
 	"todo_api/internal/models"
 	"todo_api/internal/repository"
 
@@ -109,8 +110,8 @@ func LoginHandler(pool *pgxpool.Pool, cfg *config.Config) gin.HandlerFunc {
 
 func TestProtectedHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// the authentication middleware stores the ID under "userID"
-		userID, exists := c.Get("userID")
+		// the authentication middleware stores the ID under middleware.ContextUserIDKey
+		userID, exists := c.Get(middleware.ContextUserIDKey)
 		if !exists {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "User ID not found in context"})
 			return

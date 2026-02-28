@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"strconv"
+	"todo_api/internal/middleware"
 	"todo_api/internal/repository"
 
 	"github.com/gin-gonic/gin"
@@ -22,6 +23,15 @@ type UpdateTodoInput struct {
 
 func CreateTodoHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		userIDInterface, exists := c.Get(middleware.ContextUserIDKey)
+
+		if !exists {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "User ID not found in context"})
+			return
+		}
+
+		userID := userIDInterface.(string)
+
 		var input CreateTodoInput
 
 		if err := c.ShouldBindJSON(&input); err != nil {
@@ -29,7 +39,7 @@ func CreateTodoHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 			return
 		}
 
-		todo, err := repository.CreateTodo(pool, input.Title, input.Completed)
+		todo, err := repository.CreateTodo(pool, input.Title, input.Completed, userID)
 
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -42,7 +52,17 @@ func CreateTodoHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 
 func GetAllTodosHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		todos, err := repository.GetAllTodos(pool)
+
+		userIDInterface, exists := c.Get(middleware.ContextUserIDKey)
+
+		if !exists {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "User ID not found in context"})
+			return
+		}
+
+		userID := userIDInterface.(string)
+
+		todos, err := repository.GetAllTodos(pool, userID)
 
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -54,6 +74,16 @@ func GetAllTodosHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 
 func GetTodoByIDHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(c *gin.Context) {
+
+		userIDInterface, exists := c.Get(middleware.ContextUserIDKey)
+
+		if !exists {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "User ID not found in context"})
+			return
+		}
+
+		userID := userIDInterface.(string)
+
 		idStr := c.Param("id")
 
 		id, err := strconv.Atoi(idStr)
@@ -63,7 +93,7 @@ func GetTodoByIDHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 			return
 		}
 
-		todo, err := repository.GetToDoByID(pool, id)
+		todo, err := repository.GetToDoByID(pool, id, userID)
 
 		if err != nil {
 			if err == pgx.ErrNoRows {
@@ -81,6 +111,16 @@ func GetTodoByIDHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 
 func UpdateTodoHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(c *gin.Context) {
+
+		userIDInterface, exists := c.Get(middleware.ContextUserIDKey)
+
+		if !exists {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "User ID not found in context"})
+			return
+		}
+
+		userID := userIDInterface.(string)
+
 		idStr := c.Param("id")
 
 		id, err := strconv.Atoi(idStr)
@@ -102,7 +142,7 @@ func UpdateTodoHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 			return
 		}
 
-		existing, err := repository.GetToDoByID(pool, id)
+		existing, err := repository.GetToDoByID(pool, id, userID)
 
 		if err != nil {
 			if err == pgx.ErrNoRows {
@@ -125,7 +165,7 @@ func UpdateTodoHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 			completed = *input.Completed
 		}
 
-		todo, err := repository.UpdateToDo(pool, id, title, completed)
+		todo, err := repository.UpdateToDo(pool, id, title, completed, userID)
 
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -138,6 +178,14 @@ func UpdateTodoHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 
 func DeleteTodoHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		userIDInterface, exists := c.Get(middleware.ContextUserIDKey)
+
+		if !exists {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "User ID not found in context"})
+			return
+		}
+
+		userID := userIDInterface.(string)
 		idStr := c.Param("id")
 
 		id, err := strconv.Atoi(idStr)
@@ -147,7 +195,7 @@ func DeleteTodoHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 			return
 		}
 
-		err = repository.DeleteToDo(pool, id)
+		err = repository.DeleteToDo(pool, id, userID)
 
 		if err != nil {
 			if err.Error() == "Todo with id "+idStr+" not found" {
