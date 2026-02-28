@@ -5,6 +5,7 @@ import (
 	"todo_api/internal/config"
 	"todo_api/internal/database"
 	"todo_api/internal/handlers"
+	"todo_api/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -48,6 +49,9 @@ func main() {
 
 	router.POST("/auth/register", handlers.CreateUserHandler(pool))
 	router.POST("/auth/login", handlers.LoginHandler(pool, cfg))
+
+	// Middleware test route
+	router.GET("/protectedTest", middleware.AuthMiddleware(cfg), handlers.TestProtectedHandler())
 
 	router.Run(":" + cfg.Port)
 

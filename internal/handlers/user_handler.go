@@ -106,3 +106,15 @@ func LoginHandler(pool *pgxpool.Pool, cfg *config.Config) gin.HandlerFunc {
 		c.JSON(http.StatusOK, LoginResponse{Token: tokenString})
 	}
 }
+
+func TestProtectedHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// the authentication middleware stores the ID under "userID"
+		userID, exists := c.Get("userID")
+		if !exists {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "User ID not found in context"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"message": "Protected route accessed", "user_id": userID})
+	}
+}
